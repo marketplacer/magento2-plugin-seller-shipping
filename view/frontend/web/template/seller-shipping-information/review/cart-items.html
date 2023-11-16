@@ -1,0 +1,66 @@
+<div class="box box-items">
+    <div class="box-content">
+        <div class="order-review-wrapper table-wrapper">
+            <table class="items data table table-order-review" id="overview-table-33">
+                <caption class="table-caption" translate="'Order Review'"></caption>
+                <thead>
+                    <tr>
+                        <th class="col item" scope="col" translate="'Item'"></th>
+                        <th class="col price" scope="col" translate="'Price'"></th>
+                        <th class="col qty" scope="col" translate="'Qty'"></th>
+                        <th class="col subtotal" scope="col" translate="'Subtotal'"></th>
+                    </tr>
+                </thead>
+
+                <tbody data-bind="foreach: items()">
+                    <tr>
+                        <td class="col item" data-th="Product Name">
+                            <strong class="product name product-item-name" data-bind="html: $parent.getNameUnsanitizedHtml(name)"></strong>
+                        </td>
+                        <td class="col price" data-th="Price">
+                            <span class="price-excluding-tax" data-label="Excl. Tax">
+                                <span class="cart-price"><span class="price" data-bind="text: $parent.getFormattedPrice(price)"></span>    </span>
+                            </span>
+                        </td>
+                        <td class="col qty" data-th="Qty" data-bind="text: qty.toLocaleString(window.LOCALE)"></td>
+                        <td class="col subtotal" data-th="Subtotal ">
+                            <span class="price-excluding-tax" data-label="Excl. Tax">
+                                <span class="cart-price" >
+                                    <span class="price" data-bind="text: $parent.getFormattedPrice(row_total)"></span></span>
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                <tr class="totals sub">
+                    <th class="mark" colspan="3" scope="row">Subtotal</th>
+                    <td class="amount" data-th="Subtotal">
+                        <span class="price" data-bind="text: getFormattedPrice(totals().subtotal)"></span>    </td>
+                </tr>
+                <tr class="totals shipping excl">
+                    <th class="mark" colspan="3" scope="row" data-bind="text: ' Shipping &amp; Handling (' + $parent.getShippingMethodTitle() + ')'"></th>
+                    <td class="amount">
+                        <span class="price" data-bind="text: getFormattedPrice($parent.getShippingMethodPrice())"></span>
+                    </td>
+                </tr>
+                <tr class="totals-tax">
+                    <th style="" class="mark" colspan="3" scope="row">
+                        Tax
+                    </th>
+                    <td style="" class="amount" data-th="Tax">
+                        <span class="price" data-bind="text: getFormattedPrice(totals().tax_amount)"></span>
+                    </td>
+                </tr>
+                <tr class="grand totals">
+                    <th class="mark" colspan="3" scope="row">
+                        <strong>Total for this seller</strong>
+                    </th>
+                    <td class="amount" data-th="Total for this address">
+                        <strong><span class="price" data-bind="text: getFormattedPrice(totals().grand_total)"></span></strong>
+                    </td>
+                </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

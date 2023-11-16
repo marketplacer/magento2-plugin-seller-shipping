@@ -1,0 +1,26 @@
+<div class="opc-block-summary" data-bind="blockLoader: cartIsLoading">
+    <span class="title">
+        <!--ko i18n: 'Order Summary' --> <!--/ko--><!--ko text: sellerName()--><!--/ko-->
+    </span>
+    <!-- ko foreach: getRegion('cart-items') -->
+        <!-- ko template: getTemplate() --><!-- /ko -->
+    <!--/ko-->
+</div>
+<div id="checkout-shipping-method-load" data-bind="blockLoader: isLoading">
+    <table class="table-checkout-shipping-method">
+        <thead>
+        <tr class="row">
+            <th class="col col-method" translate="'Select Method'"></th>
+            <th class="col col-price" translate="'Price'"></th>
+            <th class="col col-method" translate="'Method Title'"></th>
+            <th class="col col-carrier" translate="'Carrier Title'"></th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- ko foreach: { data: getRates(), as: 'method'} -->
+            <!--ko template: { name: $parent.shippingMethodItemTemplate} --><!-- /ko -->
+        <!-- /ko -->
+        </tbody>
+    </table>
+</div>
+

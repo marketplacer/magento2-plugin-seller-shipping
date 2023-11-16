@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="marketplacer_seller" translate="label" type="text" sortOrder="0" showInDefault="1" showInWebsite="0" showInStore="0">
+            <tab>marketplacer</tab>
+            <group id="update_seller_shipping_cron" translate="label" type="text" sortOrder="260" showInDefault="1">
+                <label>Update Seller Shipping Run Settings</label>
+                <field id="frequency" translate="label" type="select" sortOrder="1" showInDefault="1">
+                    <label>Frequency</label>
+                    <source_model>Marketplacer\SellerShipping\Model\Config\Source\Frequency</source_model>
+                    <backend_model>Marketplacer\SellerShipping\Model\Config\Backend\SellerShipping\Update</backend_model>
+                </field>
+                <field id="time" translate="label" type="time" sortOrder="2" showInDefault="1">
+                    <label>Start Time</label>
+                    <depends>
+                        <field id="frequency" negative="1">H</field>
+                    </depends>
+                </field>
+            </group>
+            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                <field id="use_cart_price_rules" translate="label" type="select" sortOrder="0" showInDefault="1">
+                    <label>Use cart price rules</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="Marketplacer\SellerShipping\Api\ShipmentEstimationInterface" type="Marketplacer\SellerShipping\Model\ShipmentEstimation"/>
+    <preference for="Marketplacer\SellerShipping\Api\GuestShipmentEstimationInterface" type="Marketplacer\SellerShipping\Model\GuestShipmentEstimation"/>
+    <preference for="Marketplacer\SellerShipping\Api\PaymentInformationManagementInterface" type="Marketplacer\SellerShipping\Model\PaymentInformationManagement"/>
+    <preference for="Marketplacer\SellerShipping\Api\GuestPaymentInformationManagementInterface" type="Marketplacer\SellerShipping\Model\GuestPaymentInformationManagement"/>
+    <preference for="Marketplacer\SellerShipping\Api\SellerShippingMethodInterface" type="Marketplacer\SellerShipping\Model\SellerShippingMethod"/>
+
+    <type name="Magento\Config\Model\Config\TypePool">
+        <arguments>
+            <argument name="environment" xsi:type="array">
+                <item name="crontab/default/jobs/mp_ss_update_seller_shipping/schedule/cron_expr" xsi:type="string">1</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Marketplacer\SellerShipping\Model\ConfigProvider">
+        <arguments>
+            <argument name="checkoutSession" xsi:type="object">Magento\Checkout\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+</config>
