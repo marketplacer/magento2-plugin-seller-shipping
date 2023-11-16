@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Webapi:etc/webapi.xsd">
+    <route url="/V1/seller/estimate-shipping-methods" method="POST">
+        <service class="Marketplacer\SellerShipping\Api\ShipmentEstimationInterface" method="estimate"/>
+        <resources>
+            <resource ref="self" />
+        </resources>
+        <data>
+            <parameter name="cartId" force="true">%cart_id%</parameter>
+        </data>
+    </route>
+
+    <route url="/V1/seller/estimate-shipping-method-by-address" method="POST">
+        <service class="Marketplacer\SellerShipping\Api\ShipmentEstimationInterface" method="estimateByExtendedAddress"/>
+        <resources>
+            <resource ref="self" />
+        </resources>
+        <data>
+            <parameter name="cartId" force="true">%cart_id%</parameter>
+        </data>
+    </route>
+
+    <!-- Managing shipping guest information -->
+    <route url="/V1/guest-seller/:cartId/estimate-shipping-methods" method="POST">
+        <service class="Marketplacer\SellerShipping\Api\GuestShipmentEstimationInterface" method="estimate"/>
+        <resources>
+            <resource ref="anonymous" />
+        </resources>
+    </route>
+
+    <route url="/V1/guest-seller/:cartId/estimate-shipping-method-by-address" method="POST">
+        <service class="Marketplacer\SellerShipping\Api\GuestShipmentEstimationInterface" method="estimateByExtendedAddress"/>
+        <resources>
+            <resource ref="anonymous" />
+        </resources>
+    </route>
+
+    <!-- Guest place order with payment information saving -->
+    <route url="/V1/guest-seller/:cartId/payment-information" method="POST">
+        <service class="Magento\Checkout\Api\GuestPaymentInformationManagementInterface" method="savePaymentInformationAndPlaceOrder"/>
+        <resources>
+            <resource ref="anonymous" />
+        </resources>
+    </route>
+
+    <route url="/V1/seller/mine/payment-information" method="POST">
+        <service class="Marketplacer\SellerShipping\Api\PaymentInformationManagementInterface" method="savePaymentInformationAndPlaceOrder"/>
+        <resources>
+            <resource ref="self" />
+        </resources>
+        <data>
+            <parameter name="cartId" force="true">%cart_id%</parameter>
+        </data>
+    </route>
+</routes>

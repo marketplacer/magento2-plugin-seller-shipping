@@ -1,0 +1,20 @@
+{
+  "name": "marketplacer/magento2-plugin-seller-shipping",
+  "description": "N/A",
+  "type": "magento2-module",
+  "license": "proprietary",
+  "require": {
+    "marketplacer/magento2-plugin-base": "^2.0.0",
+    "marketplacer/magento2-plugin-seller-api": "^2.0.0",
+    "gmostafa/php-graphql-client": "^1.8",
+    "guzzlehttp/guzzle": "^6.0.0||^7.3.0"
+  },
+  "autoload": {
+    "files": [
+      "registration.php"
+    ],
+    "psr-4": {
+      "Marketplacer\\SellerShipping\\": ""
+    }
+  }
+}
