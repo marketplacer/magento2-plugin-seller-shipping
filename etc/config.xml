@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <carriers>
+            <marketplacer>
+                <active>1</active>
+                <sallowspecific>0</sallowspecific>
+                <model>Marketplacer\SellerShipping\Model\Carrier\SellerShipping</model>
+                <name>Standard Flat Fee</name>
+                <title>Standard Flat Fee</title>
+                <specificerrmsg>This shipping method is not available. To use this shipping method, please contact us.</specificerrmsg>
+            </marketplacer>
+        </carriers>
+        <marketplacer_seller>
+            <update_seller_shipping_cron>
+                <frequency>H</frequency>
+            </update_seller_shipping_cron>
+        </marketplacer_seller>
+        <crontab>
+            <default>
+                <jobs>
+                    <mp_ss_update_seller_shipping>
+                        <schedule>
+                            <cron_expr>0 * * * *</cron_expr>
+                        </schedule>
+                    </mp_ss_update_seller_shipping>
+                </jobs>
+            </default>
+        </crontab>
+    </default>
+</config>

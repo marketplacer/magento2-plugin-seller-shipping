@@ -1,0 +1,17 @@
+<div class="block block-shipping" data-bind="blockLoader: isLoading">
+    <div class="step-title" translate="'Seller ' + sellerName()" data-role="title"></div>
+    <div class="block-content">
+        <div class="box box-shipping-method">
+            <strong class="box-title">
+                <span>Shipping Method</span>
+            </strong>
+            <div class="box-content">
+                <span data-bind="text: getShippingMethodTitle()"></span>
+                <span class="price" data-bind="text: getFormattedPrice(getShippingMethodPrice())"></span>
+            </div>
+        </div>
+        <!-- ko foreach: getRegion('cart-items') -->
+        <!-- ko template: getTemplate() --><!-- /ko -->
+        <!--/ko-->
+    </div>
+</div>
