@@ -18,8 +18,8 @@ use Magento\Sales\Api\Data\OrderPaymentExtensionInterfaceFactory;
 use Magento\Sales\Api\Data\OrderPaymentInterface;
 use Magento\Sales\Api\OrderRepositoryInterface;
 use Magento\Vault\Api\Data\PaymentTokenInterface;
-use Marketplacer\AvalaraIntegration\Model\Services\TaxRequestService;
 use Marketplacer\SellerApi\Api\Data\OrderInterface;
+use Marketplacer\SellerApi\Api\Data\ProductAttributeInterface;
 use Marketplacer\SellerShipping\Api\PaymentInformationManagementInterface;
 use Marketplacer\SellerShipping\Api\SellerShippingMethodInterface;
 use PayPal\Braintree\Gateway\Command\GetPaymentNonceCommand;
@@ -30,7 +30,6 @@ use PayPal\Braintree\Observer\DataAssignObserver;
 class PaymentInformationManagement implements PaymentInformationManagementInterface
 {
     /**
-     * @param TaxRequestService $taxRequestService
      * @param CartRepositoryInterface $cartRepository
      * @param CartExtensionFactory $cartExtensionFactory
      * @param ShippingAssignmentProcessor $shippingAssignmentProcessor
@@ -42,7 +41,6 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
      * @param Session $checkoutSession
      */
     public function __construct(
-        private readonly TaxRequestService $taxRequestService,
         private readonly CartRepositoryInterface $cartRepository,
         private readonly CartExtensionFactory $cartExtensionFactory,
         private readonly ShippingAssignmentProcessor $shippingAssignmentProcessor,
@@ -78,7 +76,7 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
 
         $quote = $this->cartRepository->get($cartId);
 
-        $itemsBySeller = array_filter($this->taxRequestService->getCartItemsBySeller($quote->getItems()), function ($items) {
+        $itemsBySeller = array_filter($this->getCartItemsBySeller($quote->getItems()), function ($items) {
             return \count($items);
         });
 
@@ -342,5 +340,28 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         $this->cartRepository->save($newQuote);
 
         return $newQuote;
+    }
+
+    /**
+     * Get the cart item separated by the sellers they belong to
+     *
+     * @param \Magento\Quote\Model\Quote\Item[] $items
+     * @return array[]
+     */
+    private function getCartItemsBySeller(array $items): array
+    {
+        $result = [
+            'default' => []
+        ];
+        foreach ($items as $item) {
+            $sellerAttribute = $item->getProduct()
+                ->getCustomAttribute(ProductAttributeInterface::SELLER_ATTRIBUTE_CODE);
+            if ($sellerAttribute !== null) {
+                $result[$sellerAttribute->getValue()][] = $item;
+            } else {
+                $result['default'][] = $item;
+            }
+        }
+        return $result;
     }
 }
