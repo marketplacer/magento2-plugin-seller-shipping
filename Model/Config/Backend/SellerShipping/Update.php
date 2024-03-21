@@ -16,10 +16,10 @@ use Marketplacer\SellerShipping\Model\Config\Source\Frequency;
 
 class Update extends Value
 {
-    public const CRON_STRING_PATH = 'crontab/default/jobs/mp_ss_update_seller_shipping/schedule/cron_expr';
+    public const CRON_STRING_PATH = 'crontab/mm_seller_shipping/jobs/mp_ss_update_seller_shipping/schedule/cron_expr';
 
 
-    public const CRON_MODEL_PATH = 'crontab/default/jobs/mp_ss_update_seller_shipping/run/model';
+    public const CRON_MODEL_PATH = 'crontab/mm_seller_shipping/jobs/mp_ss_update_seller_shipping/run/model';
 
     /**
      * @var ValueFactory

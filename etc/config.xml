@@ -17,7 +17,7 @@
             </update_seller_shipping_cron>
         </marketplacer_seller>
         <crontab>
-            <default>
+            <mm_seller_shipping>
                 <jobs>
                     <mp_ss_update_seller_shipping>
                         <schedule>
@@ -25,7 +25,7 @@
                         </schedule>
                     </mp_ss_update_seller_shipping>
                 </jobs>
-            </default>
+            </mm_seller_shipping>
         </crontab>
     </default>
 </config>
