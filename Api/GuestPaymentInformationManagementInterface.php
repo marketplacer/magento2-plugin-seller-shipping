@@ -13,7 +13,7 @@ interface GuestPaymentInformationManagementInterface
      * @param \Magento\Quote\Api\Data\AddressInterface|null $billingAddress
      * @param \Marketplacer\SellerShipping\Api\SellerShippingMethodInterface|null $sellerShippingMethod
      * @return int Order ID.
-     *@throws \Magento\Framework\Exception\CouldNotSaveException
+     * @throws \Magento\Framework\Exception\CouldNotSaveException
      */
     public function savePaymentInformationAndPlaceOrder(
         $cartId,

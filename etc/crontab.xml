@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
-    <group id="default">
+    <group id="mm_seller_shipping">
         <job name="mp_ss_update_seller_shipping" instance="Marketplacer\SellerShipping\Cron\UpdateSellerShipping" method="execute">
-            <config_path>crontab/default/jobs/mp_ss_update_seller_shipping/schedule/cron_expr</config_path>
+            <config_path>crontab/mm_seller_shipping/jobs/mp_ss_update_seller_shipping/schedule/cron_expr</config_path>
         </job>
     </group>
 </config>
