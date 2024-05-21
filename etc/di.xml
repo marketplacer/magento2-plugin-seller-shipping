@@ -18,4 +18,20 @@
             <argument name="checkoutSession" xsi:type="object">Magento\Checkout\Model\Session\Proxy</argument>
         </arguments>
     </type>
+
+    <!-- Force to save payment token start -->
+    <virtualType name="BraintreePayPalAuthorizeRequest" type="Magento\Payment\Gateway\Request\BuilderComposite">
+        <arguments>
+            <argument name="builders" xsi:type="array">
+                <item name="mp_ss_force_vault" xsi:type="string">Marketplacer\SellerShipping\Model\Payment\Gateway\Braintree\Request\PayPal\VaultDataBuilder</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="BraintreeAuthorizeRequest" type="Magento\Payment\Gateway\Request\BuilderComposite">
+        <arguments>
+            <argument name="builders" xsi:type="array">
+                <item name="mp_ss_force_vault" xsi:type="string">Marketplacer\SellerShipping\Model\Payment\Gateway\Braintree\Request\PayPal\VaultDataBuilder</item>
+            </argument>
+        </arguments>
+    </virtualType>
 </config>
