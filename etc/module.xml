@@ -6,6 +6,7 @@
             <module name="Marketplacer_SellerApi"/>
             <module name="Marketplacer_Seller"/>
             <module name="Magento_Catalog"/>
+            <module name="PayPal_Braintree"/>
         </sequence>
     </module>
 </config>

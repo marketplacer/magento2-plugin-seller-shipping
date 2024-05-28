@@ -18,6 +18,7 @@ use Magento\Sales\Api\Data\OrderPaymentExtensionInterfaceFactory;
 use Magento\Sales\Api\Data\OrderPaymentInterface;
 use Magento\Sales\Api\OrderRepositoryInterface;
 use Magento\Vault\Api\Data\PaymentTokenInterface;
+use Magento\Vault\Api\PaymentTokenRepositoryInterface;
 use Marketplacer\SellerApi\Api\Data\OrderInterface;
 use Marketplacer\SellerApi\Api\Data\ProductAttributeInterface;
 use Marketplacer\SellerShipping\Api\PaymentInformationManagementInterface;
@@ -37,19 +38,21 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
      * @param OrderPaymentExtensionInterfaceFactory $paymentExtensionFactory
      * @param GetPaymentNonceCommand $getPaymentNonceCommand
      * @param ToOrderPayment $toOrderPayment
-     * @param \Magento\Checkout\Api\PaymentInformationManagementInterface $paymentInformationManagement
+     * @param PaymentInformationManagementInterfaceAlias $paymentInformationManagement
      * @param Session $checkoutSession
+     * @param PaymentTokenRepositoryInterface $paymentTokenRepository
      */
     public function __construct(
-        private readonly CartRepositoryInterface $cartRepository,
-        private readonly CartExtensionFactory $cartExtensionFactory,
-        private readonly ShippingAssignmentProcessor $shippingAssignmentProcessor,
-        private readonly OrderRepositoryInterface $orderRepository,
-        private readonly OrderPaymentExtensionInterfaceFactory $paymentExtensionFactory,
-        private readonly GetPaymentNonceCommand $getPaymentNonceCommand,
-        private readonly ToOrderPayment $toOrderPayment,
-        private readonly \Magento\Checkout\Api\PaymentInformationManagementInterface $paymentInformationManagement,
-        private readonly Session $checkoutSession
+        private readonly CartRepositoryInterface                    $cartRepository,
+        private readonly CartExtensionFactory                       $cartExtensionFactory,
+        private readonly ShippingAssignmentProcessor                $shippingAssignmentProcessor,
+        private readonly OrderRepositoryInterface                   $orderRepository,
+        private readonly OrderPaymentExtensionInterfaceFactory      $paymentExtensionFactory,
+        private readonly GetPaymentNonceCommand                     $getPaymentNonceCommand,
+        private readonly ToOrderPayment                             $toOrderPayment,
+        private readonly PaymentInformationManagementInterfaceAlias $paymentInformationManagement,
+        private readonly Session                                    $checkoutSession,
+        private readonly PaymentTokenRepositoryInterface            $paymentTokenRepository
     ) {
     }
     /**
@@ -122,6 +125,12 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
             if ($result === null) {
                 $result = $orderId;
             }
+        }
+
+        $additionalData = $paymentMethod->getAdditionalData();
+        $isTokenMustBeSaved = $additionalData['is_active_payment_token_enabler'] ?? false;
+        if ($paymentToken && !(bool)$isTokenMustBeSaved) {
+            $this->paymentTokenRepository->delete($paymentToken);
         }
 
         $this->checkoutSession->setOrderIds($orderIds);
