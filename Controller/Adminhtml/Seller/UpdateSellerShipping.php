@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Marketplacer\SellerShipping\Controller\Adminhtml\Seller;
 
 use Magento\Backend\App\Action;
-use Magento\Framework\App\ResponseInterface;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\Controller\ResultInterface;
 use Marketplacer\SellerShipping\Model\SellerUpdateManager;
@@ -27,9 +26,9 @@ class UpdateSellerShipping extends Action
     /**
      * Execute action based on request and return result
      *
-     * @return ResultInterface|ResponseInterface
+     * @return ResultInterface
      */
-    public function execute(): ResultInterface|ResponseInterface
+    public function execute(): ResultInterface
     {
         try {
             $result = $this->sellerUpdateManager->updateShipping();
