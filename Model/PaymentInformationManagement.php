@@ -3,22 +3,28 @@ declare(strict_types=1);
 
 namespace Marketplacer\SellerShipping\Model;
 
+use Magento\Checkout\Api\Exception\PaymentProcessingRateLimitExceededException;
 use Magento\Checkout\Api\PaymentInformationManagementInterface as PaymentInformationManagementInterfaceAlias;
+use Magento\Checkout\Api\PaymentProcessingRateLimiterInterface;
+use Magento\Checkout\Model\AddressComparatorInterface;
 use Magento\Checkout\Model\Session;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\Exception\CouldNotSaveException;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Quote\Api\CartRepositoryInterface;
 use Magento\Quote\Api\Data\AddressInterface;
 use Magento\Quote\Api\Data\CartExtensionFactory;
 use Magento\Quote\Api\Data\PaymentInterface;
+use Magento\Quote\Api\GuestPaymentMethodManagementInterface;
 use Magento\Quote\Model\Quote;
 use Magento\Quote\Model\Quote\Payment\ToOrderPayment;
 use Magento\Quote\Model\Quote\ShippingAssignment\ShippingAssignmentProcessor;
+use Magento\Quote\Model\QuoteIdMaskFactory;
 use Magento\Sales\Api\Data\OrderPaymentExtensionInterface;
 use Magento\Sales\Api\Data\OrderPaymentExtensionInterfaceFactory;
 use Magento\Sales\Api\Data\OrderPaymentInterface;
 use Magento\Sales\Api\OrderRepositoryInterface;
 use Magento\Vault\Api\Data\PaymentTokenInterface;
-use Magento\Vault\Api\PaymentTokenRepositoryInterface;
 use Marketplacer\SellerApi\Api\Data\OrderInterface;
 use Marketplacer\SellerApi\Api\Data\ProductAttributeInterface;
 use Marketplacer\SellerShipping\Api\PaymentInformationManagementInterface;
@@ -27,9 +33,12 @@ use PayPal\Braintree\Gateway\Command\GetPaymentNonceCommand;
 use PayPal\Braintree\Model\Ui\ConfigProvider;
 use PayPal\Braintree\Model\Ui\PayPal\ConfigProvider as PaypalConfigProvider;
 use PayPal\Braintree\Observer\DataAssignObserver;
+use Magento\Quote\Model\QuoteIdToMaskedQuoteIdInterfaceFactory;
+use Magento\Quote\Model\ResourceModel\Quote\QuoteIdMask;
 
 class PaymentInformationManagement implements PaymentInformationManagementInterface
 {
+    private $saveRateLimitDisabled;
     /**
      * @param CartRepositoryInterface $cartRepository
      * @param CartExtensionFactory $cartExtensionFactory
@@ -38,21 +47,26 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
      * @param OrderPaymentExtensionInterfaceFactory $paymentExtensionFactory
      * @param GetPaymentNonceCommand $getPaymentNonceCommand
      * @param ToOrderPayment $toOrderPayment
-     * @param PaymentInformationManagementInterfaceAlias $paymentInformationManagement
+     * @param PaymentInformationManagementInterface $paymentInformationManagement
      * @param Session $checkoutSession
-     * @param PaymentTokenRepositoryInterface $paymentTokenRepository
+     * @param AddressComparatorInterface $addressComparator
      */
     public function __construct(
-        private readonly CartRepositoryInterface                    $cartRepository,
-        private readonly CartExtensionFactory                       $cartExtensionFactory,
-        private readonly ShippingAssignmentProcessor                $shippingAssignmentProcessor,
-        private readonly OrderRepositoryInterface                   $orderRepository,
-        private readonly OrderPaymentExtensionInterfaceFactory      $paymentExtensionFactory,
-        private readonly GetPaymentNonceCommand                     $getPaymentNonceCommand,
-        private readonly ToOrderPayment                             $toOrderPayment,
-        private readonly PaymentInformationManagementInterfaceAlias $paymentInformationManagement,
-        private readonly Session                                    $checkoutSession,
-        private readonly PaymentTokenRepositoryInterface            $paymentTokenRepository
+        private readonly CartRepositoryInterface $cartRepository,
+        private readonly CartExtensionFactory $cartExtensionFactory,
+        private readonly ShippingAssignmentProcessor $shippingAssignmentProcessor,
+        private readonly OrderRepositoryInterface $orderRepository,
+        private readonly OrderPaymentExtensionInterfaceFactory $paymentExtensionFactory,
+        private readonly GetPaymentNonceCommand $getPaymentNonceCommand,
+        private readonly ToOrderPayment $toOrderPayment,
+        private readonly \Magento\Checkout\Api\PaymentInformationManagementInterface $paymentInformationManagement,
+        private readonly Session $checkoutSession,
+        private readonly AddressComparatorInterface $addressComparator,
+        private readonly GuestPaymentMethodManagementInterface $paymentMethodManagement,
+        private readonly PaymentProcessingRateLimiterInterface $paymentsRateLimiter,
+        private readonly QuoteIdMaskFactory $quoteIdMaskFactory,
+        private readonly QuoteIdToMaskedQuoteIdInterfaceFactory $quoteIdToMaskedQuoteIdFactory,
+        private readonly QuoteIdMask $quoteIdMaskResource
     ) {
     }
     /**
@@ -69,7 +83,9 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         $cartId,
         PaymentInterface $paymentMethod,
         AddressInterface $billingAddress = null,
-        SellerShippingMethodInterface $sellerShippingMethod = null
+        SellerShippingMethodInterface $sellerShippingMethod = null,
+        $email = null,
+        $quoteIdMask = null
     ) {
         $methods  = [];
         $result = null;
@@ -106,6 +122,16 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
                 $this->setVaultPayment($orderPayment, $paymentToken, $paymentMethod);
             }
 
+            $this->paymentsRateLimiter->limit();
+            try {
+                //Have to do this hack because of savePaymentInformation() plugins.
+                $this->saveRateLimitDisabled = true;
+                $quoteIdToMaskedQuoteId = $this->quoteIdToMaskedQuoteIdFactory->create();
+                $this->savePaymentInformation($quoteIdToMaskedQuoteId->execute((int)$prepared->getId()), $email, $paymentMethod, $billingAddress);
+            } finally {
+                $this->saveRateLimitDisabled = false;
+            }
+
             $orderId = $this->paymentInformationManagement->savePaymentInformationAndPlaceOrder(
                 $prepared->getId(),
                 $paymentMethod,
@@ -127,16 +153,72 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
             }
         }
 
-        $additionalData = $paymentMethod->getAdditionalData();
-        $isTokenMustBeSaved = $additionalData['is_active_payment_token_enabler'] ?? false;
-        if ($paymentToken && !(bool)$isTokenMustBeSaved) {
-            $this->paymentTokenRepository->delete($paymentToken);
-        }
-
         $this->checkoutSession->setOrderIds($orderIds);
         $this->checkoutSession->setSellers($sellers);
 
         return $result;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function savePaymentInformation(
+        $cartId,
+        $email,
+        \Magento\Quote\Api\Data\PaymentInterface $paymentMethod,
+        \Magento\Quote\Api\Data\AddressInterface $billingAddress = null
+    ) {
+        if (!$this->saveRateLimitDisabled) {
+            try {
+                $this->savingRateLimiter->limit();
+            } catch (PaymentProcessingRateLimitExceededException $ex) {
+                //Limit reached
+                return false;
+            }
+        }
+
+        $quoteIdMask = $this->quoteIdMaskFactory->create()->load($cartId, 'masked_id');
+        /** @var Quote $quote */
+        $quote = $this->cartRepository->getActive($quoteIdMask->getQuoteId());
+        $shippingAddress = $quote->getShippingAddress();
+        if ($this->addressComparator->isEqual($shippingAddress, $billingAddress)) {
+            $shippingAddress->setSameAsBilling(1);
+        }
+        if ($billingAddress) {
+            $billingAddress->setEmail($email);
+            $quote->removeAddress($quote->getBillingAddress()->getId());
+            $quote->setBillingAddress($billingAddress);
+            $quote->setDataChanges(true);
+        } else {
+            $quote->getBillingAddress()->setEmail($email);
+        }
+        $this->limitShippingCarrier($quote);
+
+        if (!(float)$quote->getItemsQty()) {
+            throw new CouldNotSaveException(__('Some of the products are disabled.'));
+        }
+
+        $this->paymentMethodManagement->set($cartId, $paymentMethod);
+        return true;
+    }
+
+    /**
+     * Limits shipping rates request by carrier from shipping address.
+     *
+     * @param Quote $quote
+     *
+     * @return void
+     * @see \Magento\Shipping\Model\Shipping::collectRates
+     */
+    private function limitShippingCarrier(Quote $quote) : void
+    {
+        $shippingAddress = $quote->getShippingAddress();
+        if ($shippingAddress && $shippingAddress->getShippingMethod()) {
+            $shippingRate = $shippingAddress->getShippingRateByCode($shippingAddress->getShippingMethod());
+            if ($shippingRate) {
+                $shippingAddress->setLimitCarrier($shippingRate->getCarrier());
+            }
+        }
     }
 
     /**
@@ -347,6 +429,9 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         $newQuote->setIsActive(1);
 
         $this->cartRepository->save($newQuote);
+        $quoteIdMaskModel = $this->quoteIdMaskFactory->create();
+        $quoteIdMaskModel->setQuoteId($newQuote->getId());
+        $this->quoteIdMaskResource->save($quoteIdMaskModel);
 
         return $newQuote;
     }

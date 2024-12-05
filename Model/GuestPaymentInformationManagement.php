@@ -25,7 +25,8 @@ class GuestPaymentInformationManagement implements GuestPaymentInformationManage
     /**
      * Set payment information and place order for a specified cart.
      *
-     * @param int $cartId
+     * @param string $cartId
+     * @param string $email
      * @param PaymentInterface $paymentMethod
      * @param AddressInterface|null $billingAddress
      * @param SellerShippingMethodInterface|null $sellerShippingMethod
@@ -34,6 +35,7 @@ class GuestPaymentInformationManagement implements GuestPaymentInformationManage
      */
     public function savePaymentInformationAndPlaceOrder(
         $cartId,
+        $email,
         PaymentInterface $paymentMethod,
         AddressInterface $billingAddress = null,
         SellerShippingMethodInterface $sellerShippingMethod = null
@@ -44,7 +46,9 @@ class GuestPaymentInformationManagement implements GuestPaymentInformationManage
             (int)$quoteIdMask->getQuoteId(),
             $paymentMethod,
             $billingAddress,
-            $sellerShippingMethod
+            $sellerShippingMethod,
+            $email,
+            $cartId
         );
     }
 }
