@@ -37,7 +37,7 @@
 
     <!-- Guest place order with payment information saving -->
     <route url="/V1/guest-seller/:cartId/payment-information" method="POST">
-        <service class="Magento\Checkout\Api\GuestPaymentInformationManagementInterface" method="savePaymentInformationAndPlaceOrder"/>
+        <service class="Marketplacer\SellerShipping\Api\GuestPaymentInformationManagementInterface" method="savePaymentInformationAndPlaceOrder"/>
         <resources>
             <resource ref="anonymous" />
         </resources>
