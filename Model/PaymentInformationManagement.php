@@ -4,11 +4,9 @@ declare(strict_types=1);
 namespace Marketplacer\SellerShipping\Model;
 
 use Magento\Checkout\Api\Exception\PaymentProcessingRateLimitExceededException;
-use Magento\Checkout\Api\PaymentInformationManagementInterface as PaymentInformationManagementInterfaceAlias;
 use Magento\Checkout\Api\PaymentProcessingRateLimiterInterface;
 use Magento\Checkout\Model\AddressComparatorInterface;
 use Magento\Checkout\Model\Session;
-use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Exception\CouldNotSaveException;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Quote\Api\CartRepositoryInterface;
@@ -26,6 +24,7 @@ use Magento\Sales\Api\Data\OrderPaymentInterface;
 use Magento\Sales\Api\OrderRepositoryInterface;
 use Magento\Vault\Api\Data\PaymentTokenInterface;
 use Marketplacer\SellerApi\Api\Data\OrderInterface;
+use Magento\Vault\Api\PaymentTokenRepositoryInterface;
 use Marketplacer\SellerApi\Api\Data\ProductAttributeInterface;
 use Marketplacer\SellerShipping\Api\PaymentInformationManagementInterface;
 use Marketplacer\SellerShipping\Api\SellerShippingMethodInterface;
@@ -66,7 +65,8 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         private readonly PaymentProcessingRateLimiterInterface $paymentsRateLimiter,
         private readonly QuoteIdMaskFactory $quoteIdMaskFactory,
         private readonly QuoteIdToMaskedQuoteIdInterfaceFactory $quoteIdToMaskedQuoteIdFactory,
-        private readonly QuoteIdMask $quoteIdMaskResource
+        private readonly QuoteIdMask $quoteIdMaskResource,
+        private readonly PaymentTokenRepositoryInterface $paymentTokenRepository
     ) {
     }
     /**
@@ -114,7 +114,7 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         ], true);
 
         foreach ($itemsBySeller as $sellerId => $items) {
-            $quote->getShippingAddress()->setShippingMethod($methods[$sellerId]) ;
+            $quote->getShippingAddress()->setShippingMethod($methods[$sellerId]);
             $prepared = $this->prepareQuote($quote, $items, $orderId !== null, true);
 
             if ($isUseToken && $paymentToken) {
@@ -122,14 +122,17 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
                 $this->setVaultPayment($orderPayment, $paymentToken, $paymentMethod);
             }
 
-            $this->paymentsRateLimiter->limit();
-            try {
-                //Have to do this hack because of savePaymentInformation() plugins.
-                $this->saveRateLimitDisabled = true;
-                $quoteIdToMaskedQuoteId = $this->quoteIdToMaskedQuoteIdFactory->create();
-                $this->savePaymentInformation($quoteIdToMaskedQuoteId->execute((int)$prepared->getId()), $email, $paymentMethod, $billingAddress);
-            } finally {
-                $this->saveRateLimitDisabled = false;
+            if ($email) {
+                $this->paymentsRateLimiter->limit();
+                try {
+                    //Have to do this hack because of savePaymentInformation() plugins.
+                    $this->saveRateLimitDisabled = true;
+                    $quoteIdToMaskedQuoteId = $this->quoteIdToMaskedQuoteIdFactory->create();
+                    $this->savePaymentInformation($quoteIdToMaskedQuoteId->execute((int)$prepared->getId()), $email,
+                        $paymentMethod, $billingAddress);
+                } finally {
+                    $this->saveRateLimitDisabled = false;
+                }
             }
 
             $orderId = $this->paymentInformationManagement->savePaymentInformationAndPlaceOrder(
@@ -153,8 +156,15 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
             }
         }
 
+        $additionalData = $paymentMethod->getAdditionalData();
+        $isTokenMustBeSaved = $additionalData['is_active_payment_token_enabler'] ?? false;
+        if ($paymentToken && !(bool)$isTokenMustBeSaved) {
+            $this->paymentTokenRepository->delete($paymentToken);
+        }
+
         $this->checkoutSession->setOrderIds($orderIds);
         $this->checkoutSession->setSellers($sellers);
+        $this->checkoutSession->clearQuote();
 
         return $result;
     }
