@@ -9,10 +9,12 @@ use Magento\Checkout\Model\AddressComparatorInterface;
 use Magento\Checkout\Model\Session;
 use Magento\Framework\Exception\CouldNotSaveException;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Payment\Gateway\Command\Result\ArrayResultFactory;
 use Magento\Quote\Api\CartRepositoryInterface;
 use Magento\Quote\Api\Data\AddressInterface;
 use Magento\Quote\Api\Data\CartExtensionFactory;
 use Magento\Quote\Api\Data\PaymentInterface;
+use Magento\Quote\Api\GuestCartManagementInterface;
 use Magento\Quote\Api\GuestPaymentMethodManagementInterface;
 use Magento\Quote\Model\Quote;
 use Magento\Quote\Model\Quote\Payment\ToOrderPayment;
@@ -28,6 +30,7 @@ use Magento\Vault\Api\PaymentTokenRepositoryInterface;
 use Marketplacer\SellerApi\Api\Data\ProductAttributeInterface;
 use Marketplacer\SellerShipping\Api\PaymentInformationManagementInterface;
 use Marketplacer\SellerShipping\Api\SellerShippingMethodInterface;
+use Marketplacer\SellerShipping\Model\Gateway\BraintreeNonceCommand;
 use PayPal\Braintree\Gateway\Command\GetPaymentNonceCommand;
 use PayPal\Braintree\Model\Ui\ConfigProvider;
 use PayPal\Braintree\Model\Ui\PayPal\ConfigProvider as PaypalConfigProvider;
@@ -38,6 +41,7 @@ use Magento\Quote\Model\ResourceModel\Quote\QuoteIdMask;
 class PaymentInformationManagement implements PaymentInformationManagementInterface
 {
     private $saveRateLimitDisabled;
+
     /**
      * @param CartRepositoryInterface $cartRepository
      * @param CartExtensionFactory $cartExtensionFactory
@@ -46,9 +50,16 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
      * @param OrderPaymentExtensionInterfaceFactory $paymentExtensionFactory
      * @param GetPaymentNonceCommand $getPaymentNonceCommand
      * @param ToOrderPayment $toOrderPayment
-     * @param PaymentInformationManagementInterface $paymentInformationManagement
+     * @param \Magento\Checkout\Api\PaymentInformationManagementInterface $paymentInformationManagement
      * @param Session $checkoutSession
      * @param AddressComparatorInterface $addressComparator
+     * @param GuestPaymentMethodManagementInterface $paymentMethodManagement
+     * @param PaymentProcessingRateLimiterInterface $paymentsRateLimiter
+     * @param QuoteIdMaskFactory $quoteIdMaskFactory
+     * @param QuoteIdToMaskedQuoteIdInterfaceFactory $quoteIdToMaskedQuoteIdFactory
+     * @param QuoteIdMask $quoteIdMaskResource
+     * @param PaymentTokenRepositoryInterface $paymentTokenRepository
+     * @param GuestCartManagementInterface $cartManagement
      */
     public function __construct(
         private readonly CartRepositoryInterface $cartRepository,
@@ -66,7 +77,11 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         private readonly QuoteIdMaskFactory $quoteIdMaskFactory,
         private readonly QuoteIdToMaskedQuoteIdInterfaceFactory $quoteIdToMaskedQuoteIdFactory,
         private readonly QuoteIdMask $quoteIdMaskResource,
-        private readonly PaymentTokenRepositoryInterface $paymentTokenRepository
+        private readonly PaymentTokenRepositoryInterface $paymentTokenRepository,
+        private readonly GuestCartManagementInterface $cartManagement,
+        private readonly VaultCustomerRegistry $vaultCustomerRegistry,
+        private readonly ArrayResultFactory $resultFactory,
+        private readonly BraintreeNonceCommand $braintreeNonceCommand
     ) {
     }
     /**
@@ -115,24 +130,15 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
 
         foreach ($itemsBySeller as $sellerId => $items) {
             $quote->getShippingAddress()->setShippingMethod($methods[$sellerId]);
-            $prepared = $this->prepareQuote($quote, $items, $orderId !== null, true);
+            $prepared = $this->prepareQuote($quote, $items, $orderId !== null, true, $email);
 
             if ($isUseToken && $paymentToken) {
                 $orderPayment = $this->toOrderPayment->convert($quote->getPayment());
                 $this->setVaultPayment($orderPayment, $paymentToken, $paymentMethod);
             }
 
-            if ($email) {
-                $this->paymentsRateLimiter->limit();
-                try {
-                    //Have to do this hack because of savePaymentInformation() plugins.
-                    $this->saveRateLimitDisabled = true;
-                    $quoteIdToMaskedQuoteId = $this->quoteIdToMaskedQuoteIdFactory->create();
-                    $this->savePaymentInformation($quoteIdToMaskedQuoteId->execute((int)$prepared->getId()), $email,
-                        $paymentMethod, $billingAddress);
-                } finally {
-                    $this->saveRateLimitDisabled = false;
-                }
+            if($email) {
+                $billingAddress->setEmail($email);
             }
 
             $orderId = $this->paymentInformationManagement->savePaymentInformationAndPlaceOrder(
@@ -156,6 +162,7 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
             }
         }
 
+
         $additionalData = $paymentMethod->getAdditionalData();
         $isTokenMustBeSaved = $additionalData['is_active_payment_token_enabler'] ?? false;
         if ($paymentToken && !(bool)$isTokenMustBeSaved) {
@@ -164,7 +171,6 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
 
         $this->checkoutSession->setOrderIds($orderIds);
         $this->checkoutSession->setSellers($sellers);
-        $this->checkoutSession->clearQuote();
 
         return $result;
     }
@@ -270,9 +276,13 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         $publicHash = $paymentToken->getPublicHash();
         $customerId = $paymentToken->getCustomerId();
 
-        $result = $this->getPaymentNonceCommand->execute(
-            ['public_hash' => $publicHash, 'customer_id' => $customerId]
-        )->get();
+        if ($customerId) {
+            $result = $this->getPaymentNonceCommand->execute(
+                ['public_hash' => $publicHash, 'customer_id' => $customerId]
+            )->get();
+        } else {
+            $result = $this->braintreeNonceCommand->execute()->get();
+        }
 
         $orderPayment->setAdditionalInformation(
             DataAssignObserver::PAYMENT_METHOD_NONCE,
@@ -282,22 +292,18 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
             PaymentTokenInterface::PUBLIC_HASH,
             $publicHash
         );
-        $orderPayment->setAdditionalInformation(
-            PaymentTokenInterface::CUSTOMER_ID,
-            $customerId
-        );
+
+        if ($customerId) {
+            $orderPayment->setAdditionalInformation(
+                PaymentTokenInterface::CUSTOMER_ID,
+                $customerId
+            );
+        }
 
         $vaultMethod = $this->getVaultPaymentMethod(
             $paymentMethod->getMethod()
         );
         $paymentMethod->setMethod($vaultMethod);
-
-        $publicHash = $paymentToken->getPublicHash();
-        $customerId = $paymentToken->getCustomerId();
-
-        $result = $this->getPaymentNonceCommand->execute(
-            ['public_hash' => $publicHash, 'customer_id' => $customerId]
-        )->get();
 
         $data = $paymentMethod->getAdditionalData();
         $data[DataAssignObserver::PAYMENT_METHOD_NONCE] = $result['paymentMethodNonce'];
@@ -352,7 +358,7 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
      * @return Quote
      * @throws LocalizedException
      */
-    public function prepareQuote(Quote $quote, $items = [], $copyNew = true, $active = false)
+    public function prepareQuote(Quote $quote, $items = [], $copyNew = true, $active = false, $email = null)
     {
         if ($copyNew) {
             $newQuote = clone $quote;
@@ -423,8 +429,6 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
                 $newQuote->addItem($item);
             }
         }
-
-
         $shippingAssignments = [];
         if (!$newQuote->isVirtual() && $newQuote->getItemsQty() > 0) {
             $shippingAssignments[] = $this->shippingAssignmentProcessor->create($newQuote);
@@ -439,9 +443,6 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         $newQuote->setIsActive(1);
 
         $this->cartRepository->save($newQuote);
-        $quoteIdMaskModel = $this->quoteIdMaskFactory->create();
-        $quoteIdMaskModel->setQuoteId($newQuote->getId());
-        $this->quoteIdMaskResource->save($quoteIdMaskModel);
 
         return $newQuote;
     }
