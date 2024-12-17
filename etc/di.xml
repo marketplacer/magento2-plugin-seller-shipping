@@ -18,4 +18,18 @@
             <argument name="checkoutSession" xsi:type="object">Magento\Checkout\Model\Session\Proxy</argument>
         </arguments>
     </type>
+    <virtualType name="BraintreeAuthorizeRequest" type="Magento\Payment\Gateway\Request\BuilderComposite">
+        <arguments>
+            <argument name="builders" xsi:type="array">
+                <item name="tokenmark" xsi:type="string">Marketplacer\SellerShipping\Gateway\Request\VaultTokenExtensionBuilder</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="BraintreeAuthorizationHandler" type="Magento\Payment\Gateway\Response\HandlerChain">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="vault_marketplacer_registry" xsi:type="string">Marketplacer\SellerShipping\Gateway\Response\VaultMarketplacerRegistry</item>
+            </argument>
+        </arguments>
+    </virtualType>
 </config>
