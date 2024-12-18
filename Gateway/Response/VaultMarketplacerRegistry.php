@@ -14,6 +14,7 @@ use Magento\Framework\Serialize\Serializer\Json;
 use Magento\Payment\Gateway\Response\HandlerInterface;
 use Magento\Sales\Api\Data\OrderPaymentExtensionInterfaceFactory;
 use Magento\Vault\Api\Data\PaymentTokenFactoryInterface;
+use Magento\Vault\Model\PaymentTokenFactory;
 use Magento\Vault\Api\Data\PaymentTokenInterface;
 use PayPal\Braintree\Gateway\Config\Config;
 use PayPal\Braintree\Gateway\Helper\SubjectReader;
@@ -28,7 +29,7 @@ class VaultMarketplacerRegistry extends Handler implements HandlerInterface
     private $vaultCustomerRegistry;
 
     public function __construct(
-        PaymentTokenFactoryInterface $paymentTokenFactory,
+        PaymentTokenFactory $paymentTokenFactory,
         OrderPaymentExtensionInterfaceFactory $paymentExtensionFactory,
         Config $config,
         SubjectReader $subjectReader,
