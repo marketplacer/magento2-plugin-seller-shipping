@@ -20,6 +20,7 @@ use PayPal\Braintree\Gateway\Config\Config;
 use PayPal\Braintree\Gateway\Helper\SubjectReader;
 use PayPal\Braintree\Gateway\Response\Handler;
 use Marketplacer\SellerShipping\Model\VaultCustomerRegistry;
+use Magento\Vault\Model\CreditCardTokenFactory;
 
 class VaultMarketplacerRegistry extends Handler implements HandlerInterface
 {
@@ -29,7 +30,7 @@ class VaultMarketplacerRegistry extends Handler implements HandlerInterface
     private $vaultCustomerRegistry;
 
     public function __construct(
-        PaymentTokenFactory $paymentTokenFactory,
+        CreditCardTokenFactory $paymentTokenFactory,
         OrderPaymentExtensionInterfaceFactory $paymentExtensionFactory,
         Config $config,
         SubjectReader $subjectReader,
@@ -37,10 +38,8 @@ class VaultMarketplacerRegistry extends Handler implements HandlerInterface
         VaultCustomerRegistry $vaultCustomerRegistry,
         Json $serializer = null
     ) {
-
         $this->vaultCustomerRegistry = $vaultCustomerRegistry;
-        parent::__construct($paymentTokenFactory, $paymentExtensionFactory, $config, $subjectReader, $dateTime,
-            $serializer);
+        parent::__construct($paymentTokenFactory, $paymentExtensionFactory, $config, $subjectReader, $serializer);
     }
 
     /**

@@ -3,17 +3,23 @@ declare(strict_types=1);
 
 namespace Marketplacer\SellerShipping\Api;
 
+use Magento\Framework\Exception\CouldNotSaveException;
+use Magento\Quote\Api\Data\AddressInterface;
+use Magento\Quote\Api\Data\PaymentInterface;
+
 interface PaymentInformationManagementInterface
 {
     /**
      * Set payment information and place order for a specified cart.
      *
      * @param int $cartId
-     * @param \Magento\Quote\Api\Data\PaymentInterface $paymentMethod
-     * @param \Magento\Quote\Api\Data\AddressInterface|null $billingAddress
-     * @param \Marketplacer\SellerShipping\Api\SellerShippingMethodInterface|null $sellerShippingMethod
+     * @param PaymentInterface $paymentMethod
+     * @param AddressInterface|null $billingAddress
+     * @param SellerShippingMethodInterface|null $sellerShippingMethod
+     * @param string|null $email
+     * @param int|null $quoteIdMask
      * @return int Order ID.
-     * @throws \Magento\Framework\Exception\CouldNotSaveException
+     * @throws CouldNotSaveException
      */
     public function savePaymentInformationAndPlaceOrder(
         $cartId,
@@ -22,22 +28,5 @@ interface PaymentInformationManagementInterface
         \Marketplacer\SellerShipping\Api\SellerShippingMethodInterface $sellerShippingMethod = null,
         $email = null,
         $quoteIdMask = null
-    );
-
-    /**
-     * Set payment information for a specified cart.
-     *
-     * @param string $cartId
-     * @param string $email
-     * @param \Magento\Quote\Api\Data\PaymentInterface $paymentMethod
-     * @param \Magento\Quote\Api\Data\AddressInterface|null $billingAddress
-     * @throws \Magento\Framework\Exception\CouldNotSaveException
-     * @return int Order ID.
-     */
-    public function savePaymentInformation(
-        $cartId,
-        $email,
-        \Magento\Quote\Api\Data\PaymentInterface $paymentMethod,
-        \Magento\Quote\Api\Data\AddressInterface $billingAddress = null
     );
 }
