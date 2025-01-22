@@ -3,12 +3,11 @@ declare(strict_types=1);
 
 namespace Marketplacer\SellerShipping\Model;
 
-use Magento\Checkout\Api\Exception\PaymentProcessingRateLimitExceededException;
 use Magento\Checkout\Api\PaymentProcessingRateLimiterInterface;
-use Magento\Checkout\Model\AddressComparatorInterface;
 use Magento\Checkout\Model\Session;
 use Magento\Framework\Exception\CouldNotSaveException;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Payment\Gateway\Command\Result\ArrayResultFactory;
 use Magento\Quote\Api\CartRepositoryInterface;
 use Magento\Quote\Api\Data\AddressInterface;
@@ -40,8 +39,6 @@ use Magento\Quote\Model\ResourceModel\Quote\QuoteIdMask;
 
 class PaymentInformationManagement implements PaymentInformationManagementInterface
 {
-    private $saveRateLimitDisabled;
-
     /**
      * @param CartRepositoryInterface $cartRepository
      * @param CartExtensionFactory $cartExtensionFactory
@@ -52,7 +49,6 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
      * @param ToOrderPayment $toOrderPayment
      * @param \Magento\Checkout\Api\PaymentInformationManagementInterface $paymentInformationManagement
      * @param Session $checkoutSession
-     * @param AddressComparatorInterface $addressComparator
      * @param GuestPaymentMethodManagementInterface $paymentMethodManagement
      * @param PaymentProcessingRateLimiterInterface $paymentsRateLimiter
      * @param QuoteIdMaskFactory $quoteIdMaskFactory
@@ -60,6 +56,9 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
      * @param QuoteIdMask $quoteIdMaskResource
      * @param PaymentTokenRepositoryInterface $paymentTokenRepository
      * @param GuestCartManagementInterface $cartManagement
+     * @param VaultCustomerRegistry $vaultCustomerRegistry
+     * @param ArrayResultFactory $resultFactory
+     * @param BraintreeNonceCommand $braintreeNonceCommand
      */
     public function __construct(
         private readonly CartRepositoryInterface $cartRepository,
@@ -71,7 +70,6 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         private readonly ToOrderPayment $toOrderPayment,
         private readonly \Magento\Checkout\Api\PaymentInformationManagementInterface $paymentInformationManagement,
         private readonly Session $checkoutSession,
-        private readonly AddressComparatorInterface $addressComparator,
         private readonly GuestPaymentMethodManagementInterface $paymentMethodManagement,
         private readonly PaymentProcessingRateLimiterInterface $paymentsRateLimiter,
         private readonly QuoteIdMaskFactory $quoteIdMaskFactory,
@@ -84,6 +82,7 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         private readonly BraintreeNonceCommand $braintreeNonceCommand
     ) {
     }
+
     /**
      * Set payment information and place order for a specified cart.
      *
@@ -91,8 +90,12 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
      * @param PaymentInterface $paymentMethod
      * @param AddressInterface|null $billingAddress
      * @param SellerShippingMethodInterface|null $sellerShippingMethod
+     * @param null $email
+     * @param null $quoteIdMask
      * @return int Order ID.
-     * @throws \Magento\Framework\Exception\CouldNotSaveException
+     * @throws CouldNotSaveException
+     * @throws LocalizedException
+     * @throws NoSuchEntityException
      */
     public function savePaymentInformationAndPlaceOrder(
         $cartId,
@@ -173,68 +176,6 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
         $this->checkoutSession->setSellers($sellers);
 
         return $result;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function savePaymentInformation(
-        $cartId,
-        $email,
-        \Magento\Quote\Api\Data\PaymentInterface $paymentMethod,
-        \Magento\Quote\Api\Data\AddressInterface $billingAddress = null
-    ) {
-        if (!$this->saveRateLimitDisabled) {
-            try {
-                $this->savingRateLimiter->limit();
-            } catch (PaymentProcessingRateLimitExceededException $ex) {
-                //Limit reached
-                return false;
-            }
-        }
-
-        $quoteIdMask = $this->quoteIdMaskFactory->create()->load($cartId, 'masked_id');
-        /** @var Quote $quote */
-        $quote = $this->cartRepository->getActive($quoteIdMask->getQuoteId());
-        $shippingAddress = $quote->getShippingAddress();
-        if ($this->addressComparator->isEqual($shippingAddress, $billingAddress)) {
-            $shippingAddress->setSameAsBilling(1);
-        }
-        if ($billingAddress) {
-            $billingAddress->setEmail($email);
-            $quote->removeAddress($quote->getBillingAddress()->getId());
-            $quote->setBillingAddress($billingAddress);
-            $quote->setDataChanges(true);
-        } else {
-            $quote->getBillingAddress()->setEmail($email);
-        }
-        $this->limitShippingCarrier($quote);
-
-        if (!(float)$quote->getItemsQty()) {
-            throw new CouldNotSaveException(__('Some of the products are disabled.'));
-        }
-
-        $this->paymentMethodManagement->set($cartId, $paymentMethod);
-        return true;
-    }
-
-    /**
-     * Limits shipping rates request by carrier from shipping address.
-     *
-     * @param Quote $quote
-     *
-     * @return void
-     * @see \Magento\Shipping\Model\Shipping::collectRates
-     */
-    private function limitShippingCarrier(Quote $quote) : void
-    {
-        $shippingAddress = $quote->getShippingAddress();
-        if ($shippingAddress && $shippingAddress->getShippingMethod()) {
-            $shippingRate = $shippingAddress->getShippingRateByCode($shippingAddress->getShippingMethod());
-            if ($shippingRate) {
-                $shippingAddress->setLimitCarrier($shippingRate->getCarrier());
-            }
-        }
     }
 
     /**

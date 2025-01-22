@@ -73,6 +73,10 @@ class BraintreeNonceCommand
         $this->vaultMarketpplacerRegistry = $vaultMarketpplacerRegistry;
     }
 
+    /**
+     * @return ArrayResult|ResultInterface|null
+     * @throws LocalizedException
+     */
     public function execute(): ArrayResult|ResultInterface|null
     {
         $paymentToken = $this->vaultMarketpplacerRegistry->getVaultPaymentTokenGuest();
