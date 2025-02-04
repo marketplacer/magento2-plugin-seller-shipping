@@ -29,7 +29,7 @@ class Config
             self::XML_PATH_MARKETPLACER_USE_CART_PRICE_RULES
         );
     }
-
+  
     public function isAvailablePayment($paymentCode): bool
     {
         return (bool)$this->scopeConfig->getValue(
