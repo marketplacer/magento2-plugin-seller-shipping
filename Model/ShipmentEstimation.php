@@ -123,7 +123,7 @@ class ShipmentEstimation implements ShipmentEstimationInterface
             $sellerId
         ) as $method) {
             if ($isGeneralSeller ? $method->getCarrierCode() !== 'marketplacer'
-                : $method->getCarrierCode() === 'marketplacer') {
+                : $method->getCarrierCode() === 'marketplacer' || !$sellerId) {
 
                 $resultMethods[] = $method;
             }
