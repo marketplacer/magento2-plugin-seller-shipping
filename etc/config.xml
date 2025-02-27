@@ -27,5 +27,17 @@
                 </jobs>
             </mm_seller_shipping>
         </crontab>
+        <marketplacer_payments>
+            <allowed_payments>
+                <checkmo>checkmo</checkmo>
+                <purchaseorder>purchaseorder</purchaseorder>
+                <banktransfer>banktransfer</banktransfer>
+                <cashondelivery>cashondelivery</cashondelivery>
+                <braintree>braintree</braintree>
+                <braintree_paypal>braintree_paypal</braintree_paypal>
+                <braintree_cc_vault>braintree_cc_vault</braintree_cc_vault>
+                <braintree_paypal_vault>braintree_paypal_vault</braintree_paypal_vault>
+            </allowed_payments>
+        </marketplacer_payments>
     </default>
 </config>
