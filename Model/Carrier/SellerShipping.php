@@ -70,42 +70,35 @@ class SellerShipping extends AbstractCarrier implements CarrierInterface
 
         $result = $this->rateResultFactory->create();
 
-        if (count($this->sellerDataPreparer->getSellerIdsByQuoteItems($request->getAllItems())) > 1) {
-            $this->createStubMethods($result);
-        } else {
-            foreach ($this->getSellerIdsWithoutGeneral($request->getAllItems()) as $id) {
-                $seller = $this->sellerRepository->getById($id);
+        $method = $this->rateMethodFactory->create();
+        foreach ($this->sellerDataPreparer->getSellerIdsByQuoteItems($request->getAllItems()) as $id) {
+            $seller = $this->sellerRepository->getById($id);
 
-                $shippingPrice = $this->getShippingPrice($request, $seller);
+            $shippingPrice = $this->getShippingPrice($request, $seller);
 
-                $method = $this->rateMethodFactory->create();
+            $method->setCarrier($this->_code);
+            $method->setCarrierTitle($this->getConfigData('title'));
 
-                $method->setCarrier($this->_code);
+            $method->setMethod($this->_code . '_standard_flat_fee');
+            $method->setMethodTitle($this->getConfigData('name'));
 
-                if ($shippingPrice == 0) {
-                    $method->setCarrierTitle(__('Free Shipping'));
+            $method->setPrice($shippingPrice + (float)$method->getPrice());
+            $method->setCost($shippingPrice + (float)$method->getPrice());
 
-                    $method->setMethod($this->_code . '_freeshipping');
-                    $method->setMethodTitle(__('Free'));
+            if ((float)$method->getPrice() == 0) {
+                $method->setCarrierTitle(__('Free Shipping'));
 
-                    $method->setPrice('0.00');
-                    $method->setCost('0.00');
-                } else {
-                    $method->setCarrierTitle($this->getConfigData('title'));
+                $method->setMethod($this->_code . '_freeshipping');
+                $method->setMethodTitle(__('Free'));
 
-                    $method->setMethod($this->_code . '_standard_flat_fee');
-                    $method->setMethodTitle($this->getConfigData('name'));
-
-                    $method->setPrice($shippingPrice);
-                    $method->setCost($shippingPrice);
-                }
-
-                $result->append($method);
+                $method->setPrice('0.00');
+                $method->setCost('0.00');
             }
         }
-
+        $result->append($method);
         return $result;
     }
+
 
     /**
      *
@@ -236,7 +229,7 @@ class SellerShipping extends AbstractCarrier implements CarrierInterface
         $result = 0.00;
         foreach ($items as $item) {
             if (!$item->getParentItem() || !$item->getId()) {
-                $result += (float)$item->getPrice() * $item->getQty();
+                $result += (float)$item->getPriceInclTax() * $item->getQty();
             }
         }
         return $result;
