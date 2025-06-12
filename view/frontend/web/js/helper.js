@@ -2,7 +2,8 @@ define([
     'jquery',
     'mageUtils',
     'uiLayout',
-], function ($, utils,  layout) {
+    'rjsResolver'
+], function ($, utils,  layout, rjsResolver) {
     'use strict';
 
     return {
@@ -18,7 +19,10 @@ define([
                 }
             });
             if (rendererComponent.length > 0) {
-                layout(rendererComponent);
+                rjsResolver(function (){
+                    layout(rendererComponent);
+                });
+
                 if (children !== undefined) {
                     this.initChildrenComponents(children, parent)
                 }
