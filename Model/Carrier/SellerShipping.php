@@ -221,7 +221,7 @@ class SellerShipping extends AbstractCarrier implements CarrierInterface
     private function isFree(MarketplacerSellerInterface $seller, $cost): bool
     {
         $isFree = $seller->getBaseDomesticShippingFreeThreshold() > 0
-            && $cost > $seller->getBaseDomesticShippingFreeThreshold();
+            && $cost >= $seller->getBaseDomesticShippingFreeThreshold();
 
         return $isFree || $cost == 0;
     }
@@ -236,7 +236,7 @@ class SellerShipping extends AbstractCarrier implements CarrierInterface
         $result = 0.00;
         foreach ($items as $item) {
             if (!$item->getParentItem() || !$item->getId()) {
-                $result += (float)$item->getPrice() * $item->getQty();
+                $result += (float)$item->getPriceInclTax() * $item->getQty();
             }
         }
         return $result;
