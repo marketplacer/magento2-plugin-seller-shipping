@@ -37,8 +37,8 @@ class GuestPaymentInformationManagement implements GuestPaymentInformationManage
         $cartId,
         $email,
         PaymentInterface $paymentMethod,
-        AddressInterface $billingAddress = null,
-        SellerShippingMethodInterface $sellerShippingMethod = null
+        ?AddressInterface $billingAddress = null,
+        ?SellerShippingMethodInterface $sellerShippingMethod = null
     ) {
         $quoteIdMask = $this->quoteIdMaskFactory->create()->load($cartId, 'masked_id');
 

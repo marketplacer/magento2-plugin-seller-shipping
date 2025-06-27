@@ -24,8 +24,8 @@ interface PaymentInformationManagementInterface
     public function savePaymentInformationAndPlaceOrder(
         $cartId,
         \Magento\Quote\Api\Data\PaymentInterface $paymentMethod,
-        \Magento\Quote\Api\Data\AddressInterface $billingAddress = null,
-        \Marketplacer\SellerShipping\Api\SellerShippingMethodInterface $sellerShippingMethod = null,
+        ?\Magento\Quote\Api\Data\AddressInterface $billingAddress = null,
+        ?\Marketplacer\SellerShipping\Api\SellerShippingMethodInterface $sellerShippingMethod = null,
         $email = null,
         $quoteIdMask = null
     );
