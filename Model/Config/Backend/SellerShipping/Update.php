@@ -48,8 +48,8 @@ class Update extends Value
         ScopeConfigInterface $config,
         TypeListInterface $cacheTypeList,
         ValueFactory $configValueFactory,
-        AbstractResource $resource = null,
-        AbstractDb $resourceCollection = null,
+        ?AbstractResource $resource = null,
+        ?AbstractDb $resourceCollection = null,
         $runModelPath = '',
         array $data = []
     ) {

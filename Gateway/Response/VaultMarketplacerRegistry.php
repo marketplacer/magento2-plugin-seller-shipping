@@ -30,16 +30,15 @@ class VaultMarketplacerRegistry extends Handler implements HandlerInterface
     private $vaultCustomerRegistry;
 
     public function __construct(
-        CreditCardTokenFactory $paymentTokenFactory,
+        PaymentTokenFactoryInterface $paymentTokenFactory,
         OrderPaymentExtensionInterfaceFactory $paymentExtensionFactory,
         Config $config,
         SubjectReader $subjectReader,
         DateTimeFactory $dateTime,
-        VaultCustomerRegistry $vaultCustomerRegistry,
-        Json $serializer = null
+        ?Json $serializer = null
     ) {
-        $this->vaultCustomerRegistry = $vaultCustomerRegistry;
-        parent::__construct($paymentTokenFactory, $paymentExtensionFactory, $config, $subjectReader, $serializer);
+        parent::__construct($paymentTokenFactory, $paymentExtensionFactory, $config, $subjectReader, $dateTime,
+            $serializer);
     }
 
     /**

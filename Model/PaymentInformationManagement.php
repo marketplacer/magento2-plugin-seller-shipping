@@ -100,8 +100,8 @@ class PaymentInformationManagement implements PaymentInformationManagementInterf
     public function savePaymentInformationAndPlaceOrder(
         $cartId,
         PaymentInterface $paymentMethod,
-        AddressInterface $billingAddress = null,
-        SellerShippingMethodInterface $sellerShippingMethod = null,
+        ?AddressInterface $billingAddress = null,
+        ?SellerShippingMethodInterface $sellerShippingMethod = null,
         $email = null,
         $quoteIdMask = null
     ) {
